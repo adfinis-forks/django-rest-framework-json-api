@@ -96,15 +96,31 @@ def get_serializer_fields(serializer):
         return fields
 
 
-def format_keys(obj, format_type=None):
+def format_keys(obj, format_type=None, recursive=None):
     """
-    Takes either a dict or list and returns it with camelized keys only if
-    JSON_API_FORMAT_KEYS is set.
+    Takes either a dict or list and formats keys as configured in
+    `JSON_API_FORMAT_KEYS` if set. `JSON_API_FIELD_NAMES` takes precedence
+    over `JSON_API_FORMAT_KEYS` but only formats field names preserving
+    values.
 
-    :format_type: Either 'dasherize', 'camelize' or 'underscore'
+    :format_type: Either 'dasherize', 'camelize', 'capitalize' or 'underscore'
+    :recursive: If set all keys will be formatted; otherwise only keys of given object
     """
     if format_type is None:
-        format_type = getattr(settings, 'JSON_API_FORMAT_KEYS', False)
+        format_type_field_names = getattr(settings, 'JSON_API_FORMAT_FIELD_NAMES', False)
+        format_type_format_keys = getattr(settings, 'JSON_API_FORMAT_KEYS', False)
+
+        if format_type_field_names and format_type_format_keys:
+            raise RuntimeError(
+                'Setting `JSON_API_FORMAT_FIELD_NAMES` and `JSON_API_FORMAT_KEYS` '
+                'may not both be set.'
+            )
+
+        format_type = format_type_field_names or format_type_format_keys
+
+    # only format keys of values when `FORMAT_KEYS` is set
+    if recursive is None:
+        recursive = bool(getattr(settings, 'JSON_API_FORMAT_KEYS', False))
 
     if format_type in ('dasherize', 'camelize', 'underscore', 'capitalize'):
 
@@ -115,18 +131,18 @@ def format_keys(obj, format_type=None):
                     # inflection can't dasherize camelCase
                     key = inflection.underscore(key)
                     formatted[inflection.dasherize(key)] \
-                        = format_keys(value, format_type)
+                        = recursive and format_keys(value, format_type) or value
                 elif format_type == 'camelize':
                     formatted[inflection.camelize(key, False)] \
-                        = format_keys(value, format_type)
+                        = recursive and format_keys(value, format_type) or value
                 elif format_type == 'capitalize':
                     formatted[inflection.camelize(key)] \
-                        = format_keys(value, format_type)
+                        = recursive and format_keys(value, format_type) or value
                 elif format_type == 'underscore':
                     formatted[inflection.underscore(key)] \
-                        = format_keys(value, format_type)
+                        = recursive and format_keys(value, format_type) or value
             return formatted
-        if isinstance(obj, list):
+        if isinstance(obj, list) and recursive:
             return [format_keys(item, format_type) for item in obj]
         else:
             return obj
@@ -136,7 +152,11 @@ def format_keys(obj, format_type=None):
 
 def format_value(value, format_type=None):
     if format_type is None:
-        format_type = getattr(settings, 'JSON_API_FORMAT_KEYS', False)
+        format_type = getattr(
+            settings,
+            'JSON_API_FORMAT_FIELD_NAMES',
+            getattr(settings, 'JSON_API_FORMAT_KEYS', False)
+        )
     if format_type == 'dasherize':
         # inflection can't dasherize camelCase
         value = inflection.underscore(value)

@@ -30,9 +30,17 @@ class JSONParser(parsers.JSONParser):
     renderer_class = renderers.JSONRenderer
 
     @staticmethod
+    def _uses_format_translation():
+        return getattr(
+            settings,
+            'JSON_API_FORMAT_FIELD_NAMES',
+            getattr(settings, 'JSON_API_FORMAT_KEYS', False)
+        )
+
+    @staticmethod
     def parse_attributes(data):
         attributes = data.get('attributes')
-        uses_format_translation = getattr(settings, 'JSON_API_FORMAT_KEYS', False)
+        uses_format_translation = JSONParser._uses_format_translation()
 
         if not attributes:
             return dict()
@@ -44,7 +52,7 @@ class JSONParser(parsers.JSONParser):
 
     @staticmethod
     def parse_relationships(data):
-        uses_format_translation = getattr(settings, 'JSON_API_FORMAT_KEYS', False)
+        uses_format_translation = JSONParser._uses_format_translation()
         relationships = data.get('relationships')
 
         if not relationships:
