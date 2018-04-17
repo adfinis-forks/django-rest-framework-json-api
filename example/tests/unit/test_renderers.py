@@ -64,5 +64,5 @@ def test_render_format_field_names_only(settings):
         serializer.data,
         renderer_context={'view': DummyTestViewSet()})
 
-    result = json.loads(rendered)
+    result = json.loads(rendered.decode())
     assert result['data']['attributes']['json-field'] == {'JsonKey': 'JsonValue'}
