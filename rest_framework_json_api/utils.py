@@ -356,21 +356,20 @@ def get_included_serializers(serializer):
 
 
 def get_relation_instance(resource_instance, source, serializer):
+    relation_instance = None
+
     try:
         relation_instance = operator.attrgetter(source)(resource_instance)
     except AttributeError:
         # if the field is not defined on the model then we check the serializer
-        # and if no value is there we skip over the field completely
         serializer_method = getattr(serializer, source, None)
         if serializer_method and hasattr(serializer_method, '__call__'):
             relation_instance = serializer_method(resource_instance)
-        else:
-            return False, None
 
     if isinstance(relation_instance, Manager):
         relation_instance = relation_instance.all()
 
-    return True, relation_instance
+    return relation_instance
 
 
 class Hyperlink(six.text_type):

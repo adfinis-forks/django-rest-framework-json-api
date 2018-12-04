@@ -113,11 +113,9 @@ class JSONRenderer(renderers.JSONRenderer):
             relation_type = utils.get_related_resource_type(field)
 
             if isinstance(field, relations.HyperlinkedIdentityField):
-                resolved, relation_instance = utils.get_relation_instance(
+                relation_instance = utils.get_relation_instance(
                     resource_instance, source, field.parent
                 )
-                if not resolved:
-                    continue
                 # special case for HyperlinkedIdentityField
                 relation_data = list()
 
@@ -150,13 +148,6 @@ class JSONRenderer(renderers.JSONRenderer):
                 data.update({field_name: relation_data})
 
             if isinstance(field, (ResourceRelatedField, )):
-                relation_instance_id = getattr(resource_instance, source + "_id", None)
-                if not relation_instance_id:
-                    resolved, relation_instance = utils.get_relation_instance(resource_instance,
-                                                                              source, field.parent)
-                    if not resolved:
-                        continue
-
                 if not isinstance(field, SkipDataMixin):
                     relation_data.update({'data': resource.get(field_name)})
 
@@ -166,11 +157,9 @@ class JSONRenderer(renderers.JSONRenderer):
             if isinstance(
                     field, (relations.PrimaryKeyRelatedField, relations.HyperlinkedRelatedField)
             ):
-                resolved, relation = utils.get_relation_instance(
+                relation = utils.get_relation_instance(
                     resource_instance, '%s_id' % source, field.parent
                 )
-                if not resolved:
-                    continue
                 relation_id = relation if resource.get(field_name) else None
                 relation_data = {
                     'data': (
@@ -195,11 +184,9 @@ class JSONRenderer(renderers.JSONRenderer):
                 continue
 
             if isinstance(field, relations.ManyRelatedField):
-                resolved, relation_instance = utils.get_relation_instance(
+                relation_instance = utils.get_relation_instance(
                     resource_instance, source, field.parent
                 )
-                if not resolved:
-                    continue
 
                 relation_data = {}
 
@@ -230,7 +217,7 @@ class JSONRenderer(renderers.JSONRenderer):
                     continue
 
                 relation_data = list()
-                for nested_resource_instance in relation_instance:
+                for nested_resource_instance in (relation_instance or []):
                     nested_resource_instance_type = (
                         relation_type or
                         utils.get_resource_type_from_instance(nested_resource_instance)
@@ -251,16 +238,14 @@ class JSONRenderer(renderers.JSONRenderer):
                 continue
 
             if isinstance(field, ListSerializer):
-                resolved, relation_instance = utils.get_relation_instance(
+                relation_instance = utils.get_relation_instance(
                     resource_instance, source, field.parent
                 )
-                if not resolved:
-                    continue
 
                 relation_data = list()
 
                 serializer_data = resource.get(field_name)
-                resource_instance_queryset = list(relation_instance)
+                resource_instance_queryset = list(relation_instance or [])
                 if isinstance(serializer_data, list):
                     for position in range(len(serializer_data)):
                         nested_resource_instance = resource_instance_queryset[position]
@@ -280,11 +265,9 @@ class JSONRenderer(renderers.JSONRenderer):
             if isinstance(field, Serializer):
                 relation_instance_id = getattr(resource_instance, source + "_id", None)
                 if not relation_instance_id:
-                    resolved, relation_instance = utils.get_relation_instance(
+                    relation_instance = utils.get_relation_instance(
                         resource_instance, source, field.parent
                     )
-                    if not resolved:
-                        continue
 
                     if relation_instance is not None:
                         relation_instance_id = relation_instance.pk
